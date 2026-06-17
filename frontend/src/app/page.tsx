@@ -941,72 +941,80 @@ export default function AstroVerseDashboard() {
     const planetaryPositions = k.PlanetaryPositions ? (typeof k.PlanetaryPositions === "string" ? JSON.parse(k.PlanetaryPositions) : k.PlanetaryPositions) : [];
     const dasha = k.DashaAnalysis ? (typeof k.DashaAnalysis === "string" ? JSON.parse(k.DashaAnalysis) : k.DashaAnalysis) : [];
 
-    let chartData: Record<string, string[]> = {};
-    try { chartData = JSON.parse(k.LagnaChartData); } catch {}
-    
-    const getPlanetsString = (houseKey: string) => {
-      return chartData[houseKey]?.join(", ") || "";
+    let lagnaData: Record<string, string[]> = {};
+    let navamsaData: Record<string, string[]> = {};
+    try { lagnaData = JSON.parse(k.LagnaChartData); } catch {}
+    try { navamsaData = JSON.parse(k.NavamsaChartData); } catch {}
+
+    const generateNorthIndianSvg = (data: Record<string, string[]>, isLagna: boolean) => {
+      const getPlanetsString = (houseKey: string) => {
+        return data[houseKey]?.join(", ") || "";
+      };
+      return `
+        <svg viewBox="0 0 200 200" style="width:320px; height:320px; border:2px solid #b38b40; background:#faf7f0; border-radius: 8px;">
+          <rect x="10" y="10" width="180" height="180" class="chart-line" />
+          <line x1="10" y1="10" x2="190" y2="190" class="chart-line" />
+          <line x1="190" y1="10" x2="10" y2="190" class="chart-line" />
+          <line x1="100" y1="10" x2="10" y2="100" class="chart-line" />
+          <line x1="10" y1="100" x2="100" y2="190" class="chart-line" />
+          <line x1="100" y1="190" x2="190" y2="100" class="chart-line" />
+          <line x1="190" y1="100" x2="100" y2="10" class="chart-line" />
+          <text x="100" y="45" class="chart-planet">${getPlanetsString("house1")}</text>
+          <text x="100" y="55" class="chart-text">${isLagna ? "1 (Lagna)" : "1"}</text>
+          <text x="50" y="25" class="chart-planet">${getPlanetsString("house2")}</text>
+          <text x="50" y="35" class="chart-text">2</text>
+          <text x="25" y="50" class="chart-planet">${getPlanetsString("house3")}</text>
+          <text x="25" y="60" class="chart-text">3</text>
+          <text x="50" y="100" class="chart-planet">${getPlanetsString("house4")}</text>
+          <text x="50" y="110" class="chart-text">4</text>
+          <text x="25" y="140" class="chart-planet">${getPlanetsString("house5")}</text>
+          <text x="25" y="150" class="chart-text">5</text>
+          <text x="50" y="170" class="chart-planet">${getPlanetsString("house6")}</text>
+          <text x="50" y="180" class="chart-text">6</text>
+          <text x="100" y="145" class="chart-planet">${getPlanetsString("house7")}</text>
+          <text x="100" y="155" class="chart-text">7</text>
+          <text x="150" y="170" class="chart-planet">${getPlanetsString("house8")}</text>
+          <text x="150" y="180" class="chart-text">8</text>
+          <text x="175" y="140" class="chart-planet">${getPlanetsString("house9")}</text>
+          <text x="175" y="150" class="chart-text">9</text>
+          <text x="150" y="100" class="chart-planet">${getPlanetsString("house10")}</text>
+          <text x="150" y="110" class="chart-text">10</text>
+          <text x="175" y="50" class="chart-planet">${getPlanetsString("house11")}</text>
+          <text x="175" y="60" class="chart-text">11</text>
+          <text x="150" y="25" class="chart-planet">${getPlanetsString("house12")}</text>
+          <text x="150" y="35" class="chart-text">12</text>
+        </svg>
+      `;
     };
 
-    const northSvg = `
-      <svg viewBox="0 0 200 200" style="width:230px; height:230px; border:1px solid #b38b40; background:#faf7f0;">
-        <rect x="10" y="10" width="180" height="180" stroke="#8c6212" stroke-width="1.5" fill="none" />
-        <line x1="10" y1="10" x2="190" y2="190" stroke="#8c6212" stroke-width="1.5" />
-        <line x1="190" y1="10" x2="10" y2="190" stroke="#8c6212" stroke-width="1.5" />
-        <line x1="100" y1="10" x2="10" y2="100" stroke="#8c6212" stroke-width="1.5" />
-        <line x1="10" y1="100" x2="100" y2="190" stroke="#8c6212" stroke-width="1.5" />
-        <line x1="100" y1="190" x2="190" y2="100" stroke="#8c6212" stroke-width="1.5" />
-        <line x1="190" y1="100" x2="100" y2="1" stroke="#8c6212" stroke-width="1.5" />
-        <text x="100" y="45" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="bold" fill="#b38b40">${getPlanetsString("house1")}</text>
-        <text x="100" y="55" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8c6212">1 (Lagna)</text>
-        <text x="50" y="25" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="bold" fill="#b38b40">${getPlanetsString("house2")}</text>
-        <text x="50" y="35" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8c6212">2</text>
-        <text x="25" y="50" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="bold" fill="#b38b40">${getPlanetsString("house3")}</text>
-        <text x="25" y="60" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8c6212">3</text>
-        <text x="50" y="100" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="bold" fill="#b38b40">${getPlanetsString("house4")}</text>
-        <text x="50" y="110" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8c6212">4</text>
-        <text x="25" y="140" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="bold" fill="#b38b40">${getPlanetsString("house5")}</text>
-        <text x="25" y="150" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8c6212">5</text>
-        <text x="50" y="170" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="bold" fill="#b38b40">${getPlanetsString("house6")}</text>
-        <text x="50" y="180" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8c6212">6</text>
-        <text x="100" y="145" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="bold" fill="#b38b40">${getPlanetsString("house7")}</text>
-        <text x="100" y="155" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8c6212">7</text>
-        <text x="150" y="170" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="bold" fill="#b38b40">${getPlanetsString("house8")}</text>
-        <text x="150" y="180" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8c6212">8</text>
-        <text x="175" y="140" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="bold" fill="#b38b40">${getPlanetsString("house9")}</text>
-        <text x="175" y="150" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8c6212">9</text>
-        <text x="150" y="100" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="bold" fill="#b38b40">${getPlanetsString("house10")}</text>
-        <text x="150" y="110" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8c6212">10</text>
-        <text x="175" y="50" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="bold" fill="#b38b40">${getPlanetsString("house11")}</text>
-        <text x="175" y="60" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8c6212">11</text>
-        <text x="150" y="25" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="bold" fill="#b38b40">${getPlanetsString("house12")}</text>
-        <text x="150" y="35" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8c6212">12</text>
-      </svg>
-    `;
+    const generateSouthIndianSvg = (data: Record<string, string[]>) => {
+      const cells = [
+        { id: "12", x: 0, y: 0 }, { id: "1", x: 50, y: 0 }, { id: "2", x: 100, y: 0 }, { id: "3", x: 150, y: 0 },
+        { id: "11", x: 0, y: 50 },                                                     { id: "4", x: 150, y: 50 },
+        { id: "10", x: 0, y: 100 },                                                    { id: "5", x: 150, y: 100 },
+        { id: "9", x: 0, y: 150 },  { id: "8", x: 50, y: 150 }, { id: "7", x: 100, y: 150 }, { id: "6", x: 150, y: 150 }
+      ];
+      return `
+        <svg viewBox="0 0 200 200" style="width:320px; height:320px; border:2px solid #b38b40; background:#faf7f0; border-radius: 8px;">
+          <rect x="0" y="0" width="200" height="200" class="chart-line" />
+          <line x1="50" y1="0" class="chart-line" x2="50" y2="200" />
+          <line x1="100" y1="0" class="chart-line" x2="100" y2="200" />
+          <line x1="150" y1="0" class="chart-line" x2="150" y2="200" />
+          <line x1="0" y1="50" class="chart-line" x2="200" y2="50" />
+          <line x1="0" y1="100" class="chart-line" x2="200" y2="100" />
+          <line x1="0" y1="150" class="chart-line" x2="200" y2="150" />
+          ${cells.map(c => `
+            <g>
+              <text x="${c.x + 25}" y="${c.y + 40}" class="chart-text">${c.id}</text>
+              <text x="${c.x + 25}" y="${c.y + 25}" class="chart-planet">${data["house" + c.id]?.join(", ") || ""}</text>
+            </g>
+          `).join("")}
+        </svg>
+      `;
+    };
 
-    const cells = [
-      { id: "12", x: 0, y: 0 }, { id: "1", x: 50, y: 0 }, { id: "2", x: 100, y: 0 }, { id: "3", x: 150, y: 0 },
-      { id: "11", x: 0, y: 50 },                                                     { id: "4", x: 150, y: 50 },
-      { id: "10", x: 0, y: 100 },                                                    { id: "5", x: 150, y: 100 },
-      { id: "9", x: 0, y: 150 },  { id: "8", x: 50, y: 150 }, { id: "7", x: 100, y: 150 }, { id: "6", x: 150, y: 150 }
-    ];
-    const southSvg = `
-      <svg viewBox="0 0 200 200" style="width:230px; height:230px; border:1px solid #b38b40; background:#faf7f0;">
-        <rect x="0" y="0" width="200" height="200" stroke="#8c6212" stroke-width="1.5" fill="none" />
-        <line x1="50" y1="0" x2="50" y2="200" stroke="#8c6212" stroke-width="1.5" />
-        <line x1="100" y1="0" x2="100" y2="200" stroke="#8c6212" stroke-width="1.5" />
-        <line x1="150" y1="0" x2="150" y2="200" stroke="#8c6212" stroke-width="1.5" />
-        <line x1="0" y1="50" x2="200" y2="50" stroke="#8c6212" stroke-width="1.5" />
-        <line x1="0" y1="100" x2="200" y2="100" stroke="#8c6212" stroke-width="1.5" />
-        <line x1="0" y1="150" x2="200" y2="150" stroke="#8c6212" stroke-width="1.5" />
-        ${cells.map(c => `
-          <g>
-            <text x="${c.x + 25}" y="${c.y + 40}" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8c6212">${c.id}</text>
-            <text x="${c.x + 25}" y="${c.y + 25}" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="bold" fill="#b38b40">${chartData["house" + c.id]?.join(", ") || ""}</text>
-          </g>
-        `).join("")}
-      </svg>
-    `;
+    const lagnaSvg = selectedChartStyle === "north" ? generateNorthIndianSvg(lagnaData, true) : generateSouthIndianSvg(lagnaData);
+    const navamsaSvg = selectedChartStyle === "north" ? generateNorthIndianSvg(navamsaData, false) : generateSouthIndianSvg(navamsaData);
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
@@ -1136,6 +1144,35 @@ export default function AstroVerseDashboard() {
               font-weight: 700;
               margin-top: 8px;
               text-transform: uppercase;
+            }
+            .chart-line {
+              stroke: #8c6212;
+              stroke-width: 1.5;
+              fill: none;
+            }
+            .chart-text {
+              fill: #8c6212;
+              font-family: sans-serif;
+              font-size: 7.5px;
+              font-weight: 500;
+              text-anchor: middle;
+              paint-order: stroke fill;
+              stroke: #faf7f0;
+              stroke-width: 2.5px;
+              stroke-linejoin: round;
+              stroke-linecap: round;
+            }
+            .chart-planet {
+              fill: #b38b40;
+              font-family: sans-serif;
+              font-size: 8.5px;
+              font-weight: 700;
+              text-anchor: middle;
+              paint-order: stroke fill;
+              stroke: #faf7f0;
+              stroke-width: 2.5px;
+              stroke-linejoin: round;
+              stroke-linecap: round;
             }
             .meta-info {
               background-color: #faf7f0;
@@ -1295,11 +1332,11 @@ export default function AstroVerseDashboard() {
             <div class="section-title">III. Astrological Kundli Charts</div>
             <div class="charts-row">
               <div class="chart-container">
-                ${northSvg}
+                ${lagnaSvg}
                 <div class="chart-label">Lagna Kundli (D-1 Chart)</div>
               </div>
               <div class="chart-container">
-                ${southSvg}
+                ${navamsaSvg}
                 <div class="chart-label">Navamsa Kundli (D-9 Chart)</div>
               </div>
             </div>
