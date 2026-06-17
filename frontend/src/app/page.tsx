@@ -1833,6 +1833,13 @@ export default function AstroVerseDashboard() {
         degree: `${(seed * idx + 14) % 30}°24'`,
         house: (seed + idx * 2) % 12 + 1
       }))),
+      DashaAnalysis: JSON.stringify([
+        { mahadasha: "Jupiter", start: `${birthYear}-01-01`, end: `${birthYear + 16}-01-01` },
+        { mahadasha: "Saturn", start: `${birthYear + 16}-01-01`, end: `${birthYear + 35}-01-01` },
+        { mahadasha: "Mercury", start: `${birthYear + 35}-01-01`, end: `${birthYear + 52}-01-01` },
+        { mahadasha: "Ketu", start: `${birthYear + 52}-01-01`, end: `${birthYear + 59}-01-01` },
+        { mahadasha: "Venus", start: `${birthYear + 59}-01-01`, end: `${birthYear + 79}-01-01` }
+      ]),
       Yogas: JSON.stringify([{ name: "Budhaditya Yoga", description: "Sun and Mercury conjunction provides strong intellectual skills." }]),
       Doshas: JSON.stringify({ isManglik: seed % 3 === 0, manglikSeverity: "Mild", sadeSatiStatus: "No Sade Sati." }),
       Panchang: JSON.stringify(panchangObj),
@@ -2792,7 +2799,7 @@ export default function AstroVerseDashboard() {
                           <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-3">
                             <h4 className="text-xs font-bold uppercase tracking-widest text-primary">Vimshottari Dasha Outlook</h4>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                              {JSON.parse(vaultMemberKundli.DashaAnalysis).slice(0, 3).map((d: any) => (
+                              {(vaultMemberKundli.DashaAnalysis ? JSON.parse(vaultMemberKundli.DashaAnalysis) : []).slice(0, 3).map((d: any) => (
                                 <div key={d.mahadasha} className="bg-black/20 p-3 rounded-lg border border-white/5">
                                   <span className="text-xs text-primary font-bold">{d.mahadasha} Mahadasha</span>
                                   <div className="text-[11px] text-muted-foreground mt-1">
