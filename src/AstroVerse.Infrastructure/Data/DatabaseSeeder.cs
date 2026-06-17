@@ -5,13 +5,25 @@ using System.Security.Cryptography;
 using System.Text;
 using AstroVerse.Core.Domain;
 
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
+
 namespace AstroVerse.Infrastructure.Data
 {
     public static class DatabaseSeeder
     {
         public static void Seed(ApplicationDbContext context)
         {
-            context.Database.EnsureCreated();
+            var databaseCreator = context.Database.GetService<IDatabaseCreator>() as RelationalDatabaseCreator;
+            if (databaseCreator != null)
+            {
+                if (!databaseCreator.Exists()) databaseCreator.Create();
+                if (!databaseCreator.HasTables()) databaseCreator.CreateTables();
+            }
+            else
+            {
+                context.Database.EnsureCreated();
+            }
 
             if (!context.Users.Any())
             {
