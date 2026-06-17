@@ -1,0 +1,157 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 240 33% 8%;
+  --foreground: 0 0% 98%;
+  
+  --card: 240 33% 12%;
+  --card-foreground: 0 0% 98%;
+  
+  --popover: 240 33% 8%;
+  --popover-foreground: 0 0% 98%;
+  
+  --primary: 43 90% 59%; /* Cosmic Gold */
+  --primary-foreground: 240 33% 8%;
+  
+  --secondary: 260 60% 65%; /* Cosmic Purple */
+  --secondary-foreground: 0 0% 98%;
+  
+  --muted: 240 20% 25%;
+  --muted-foreground: 240 10% 70%;
+  
+  --accent: 260 60% 65%;
+  --accent-foreground: 0 0% 98%;
+  
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  
+  --border: 240 30% 20%;
+  --input: 240 30% 20%;
+  --ring: 43 90% 59%;
+}
+
+.light-theme {
+  --background: 240 20% 96%;
+  --foreground: 240 33% 8%;
+  
+  --card: 0 0% 100%;
+  --card-foreground: 240 33% 8%;
+  
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 33% 8%;
+  
+  --primary: 260 60% 50%; /* Deep Purple primary in light mode */
+  --primary-foreground: 0 0% 100%;
+  
+  --secondary: 43 90% 45%; /* Gold accent */
+  --secondary-foreground: 0 0% 100%;
+  
+  --muted: 240 10% 90%;
+  --muted-foreground: 240 10% 40%;
+  
+  --border: 240 10% 85%;
+  --input: 240 10% 85%;
+  --ring: 260 60% 50%;
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism Cards */
+.glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.light-theme .glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Cosmic Background Glows */
+.cosmic-glow {
+  position: absolute;
+  width: 350px;
+  height: 350px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+  filter: blur(40px);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.cosmic-glow-gold {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.12) 0%, rgba(0, 0, 0, 0) 70%);
+  filter: blur(45px);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Interactive SVG Chart Grid Styles */
+.chart-line {
+  stroke: hsl(var(--border));
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.chart-active-line {
+  stroke: hsl(var(--primary));
+  stroke-width: 2.5;
+  fill: none;
+}
+
+.chart-text {
+  fill: hsl(var(--foreground));
+  font-size: 10px;
+  font-weight: 500;
+  text-anchor: middle;
+}
+
+.chart-planet {
+  fill: hsl(var(--primary));
+  font-size: 11px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+/* Scrollbar customization */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
+}
+
+/* Animations */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}

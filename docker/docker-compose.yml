@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  astro-db:
+    image: postgres:15-alpine
+    container_name: astro-db
+    environment:
+      POSTGRES_DB: astroverse
+      POSTGRES_USER: dbadmin
+      POSTGRES_PASSWORD: SecretPassword123!
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbadmin -d astroverse"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  astro-cache:
+    image: redis:7-alpine
+    container_name: astro-cache
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  astro-api:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.backend
+    container_name: astro-api
+    depends_on:
+      astro-db:
+        condition: service_healthy
+      astro-cache:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=astro-db;Database=astroverse;Username=dbadmin;Password=SecretPassword123!;"
+      Redis__ConnectionString: "astro-cache:6379"
+      Jwt__Secret: "AstroVerseSuperSecretLongJWTKey1234567890!"
+      Jwt__Issuer: "AstroVerse"
+      Jwt__Audience: "AstroVerseUsers"
+
+  astro-web:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.frontend
+    container_name: astro-web
+    depends_on:
+      - astro-api
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:5000"
+
+volumes:
+  pgdata:
