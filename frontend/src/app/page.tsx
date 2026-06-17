@@ -352,12 +352,12 @@ export default function AstroVerseDashboard() {
 
           {/* Autocomplete Suggestions Dropdown */}
           {suggestions.length > 0 && (
-            <div className="absolute z-50 w-full bg-[#1b1b32] border border-white/10 rounded-lg shadow-xl max-h-60 overflow-y-auto mt-1 divide-y divide-white/5">
+            <div className="absolute z-50 w-full bg-[#1b1b32] dark:bg-[#1b1b32] bg-white border border-white/10 dark:border-white/10 border-black/10 rounded-lg shadow-xl max-h-60 overflow-y-auto mt-1 divide-y divide-white/5">
               {suggestions.map((item, index) => (
                 <div
                   key={`${idPrefix}-sugg-${index}`}
                   onClick={() => handleSelectSuggestion(item)}
-                  className="p-3 text-xs text-muted-foreground hover:bg-white/5 hover:text-foreground cursor-pointer transition text-left"
+                  className="p-3 text-xs text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground cursor-pointer transition text-left"
                 >
                   {item.display_name}
                 </div>
@@ -1887,7 +1887,7 @@ export default function AstroVerseDashboard() {
     };
 
     return (
-      <svg viewBox="0 0 200 200" className="w-full aspect-square max-w-[280px] border border-white/20 rounded-lg bg-black/40">
+      <svg viewBox="0 0 200 200" className="w-full aspect-square max-w-[280px] border border-black/10 dark:border-white/20 rounded-lg bg-black/5 dark:bg-black/40">
         {/* Draw Outer Square */}
         <rect x="10" y="10" width="180" height="180" className="chart-line" />
         {/* Draw Inner Diagonals */}
@@ -1954,7 +1954,7 @@ export default function AstroVerseDashboard() {
     ];
 
     return (
-      <svg viewBox="0 0 200 200" className="w-full aspect-square max-w-[280px] border border-white/20 rounded-lg bg-black/40">
+      <svg viewBox="0 0 200 200" className="w-full aspect-square max-w-[280px] border border-black/10 dark:border-white/20 rounded-lg bg-black/5 dark:bg-black/40">
         {/* Draw outer border */}
         <rect x="0" y="0" width="200" height="200" className="chart-line" />
         
@@ -2514,7 +2514,7 @@ export default function AstroVerseDashboard() {
                           <label className="text-xs font-semibold text-muted-foreground">Gender</label>
                           <select 
                             value={editGender} onChange={(e) => setEditGender(e.target.value)}
-                            className="w-full bg-[#1b1b32] border border-white/10 rounded-lg p-2.5 text-sm outline-none text-foreground"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-sm outline-none text-foreground"
                           >
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
@@ -2526,7 +2526,7 @@ export default function AstroVerseDashboard() {
                           <label className="text-xs font-semibold text-muted-foreground">Relationship</label>
                           <select 
                             value={editRelation} onChange={(e) => setEditRelation(e.target.value)}
-                            className="w-full bg-[#1b1b32] border border-white/10 rounded-lg p-2.5 text-sm outline-none text-foreground"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-sm outline-none text-foreground"
                           >
                             <option value="Self">Self</option>
                             <option value="Spouse">Spouse</option>
@@ -2541,7 +2541,7 @@ export default function AstroVerseDashboard() {
                           <label className="text-xs font-semibold text-muted-foreground">Date of Birth</label>
                           <input 
                             type="date" required value={editDob} onChange={(e) => setEditDob(e.target.value)}
-                            className="w-full bg-[#1b1b32] border border-white/10 rounded-lg p-2.5 text-sm outline-none text-foreground"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-sm outline-none text-foreground"
                           />
                         </div>
 
@@ -2549,7 +2549,7 @@ export default function AstroVerseDashboard() {
                           <label className="text-xs font-semibold text-muted-foreground">Time of Birth</label>
                           <input 
                             type="time" required value={editTob} onChange={(e) => setEditTob(e.target.value)}
-                            className="w-full bg-[#1b1b32] border border-white/10 rounded-lg p-2.5 text-sm outline-none text-foreground"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-sm outline-none text-foreground"
                           />
                         </div>
 
@@ -2665,7 +2665,7 @@ export default function AstroVerseDashboard() {
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             
                             {/* Side-by-side Charts */}
-                            <div className="space-y-6 bg-black/20 p-4 rounded-2xl border border-white/5">
+                            <div className="space-y-6 glass-card p-4 rounded-2xl">
                               <div>
                                 <span className="text-xs font-bold uppercase tracking-widest text-primary block mb-2">Lagna Birth Chart (D-1)</span>
                                 <div className="flex items-center justify-center">
@@ -2800,7 +2800,7 @@ export default function AstroVerseDashboard() {
                             <h4 className="text-xs font-bold uppercase tracking-widest text-primary">Vimshottari Dasha Outlook</h4>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                               {(vaultMemberKundli.DashaAnalysis ? JSON.parse(vaultMemberKundli.DashaAnalysis) : []).slice(0, 3).map((d: any) => (
-                                <div key={d.mahadasha} className="bg-black/20 p-3 rounded-lg border border-white/5">
+                                <div key={d.mahadasha} className="glass-card p-3 rounded-lg">
                                   <span className="text-xs text-primary font-bold">{d.mahadasha} Mahadasha</span>
                                   <div className="text-[11px] text-muted-foreground mt-1">
                                     <p>Start: {d.start}</p>
@@ -2989,7 +2989,7 @@ export default function AstroVerseDashboard() {
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         
                         {/* Side-by-side Charts */}
-                        <div className="space-y-6 bg-black/20 p-4 rounded-2xl border border-white/5">
+                        <div className="space-y-6 glass-card p-4 rounded-2xl">
                           <div>
                             <span className="text-xs font-bold uppercase tracking-widest text-primary block mb-2">Lagna Birth Chart (D-1)</span>
                             <div className="flex items-center justify-center">
@@ -3485,7 +3485,7 @@ export default function AstroVerseDashboard() {
               </div>
 
               {/* Chat conversations layout */}
-              <div className="flex-1 bg-black/40 border border-white/10 rounded-2xl p-6 overflow-y-auto space-y-4 flex flex-col justify-end">
+              <div className="flex-1 glass-card rounded-2xl p-6 overflow-y-auto space-y-4 flex flex-col justify-end">
                 <div className="space-y-4 overflow-y-auto max-h-[400px]">
                   {aiConversation.map((chat, idx) => (
                     <div 

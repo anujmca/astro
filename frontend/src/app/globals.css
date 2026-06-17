@@ -155,3 +155,26 @@ body {
 .animate-spin-slow {
   animation: spin-slow 20s linear infinite;
 }
+
+/* Premium Select Options & Input Overrides for Theme Adaptation */
+select option {
+  background-color: #1b1b32;
+  color: #ffffff;
+}
+
+.light-theme select option {
+  background-color: #ffffff;
+  color: #1a1a2e;
+}
+
+.light-theme input:not(.bg-transparent), 
+.light-theme select:not(.bg-transparent), 
+.light-theme textarea:not(.bg-transparent) {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+.light-theme .chart-line {
+  stroke: rgba(0, 0, 0, 0.15) !important;
+}
