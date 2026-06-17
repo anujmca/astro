@@ -12,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // --- 1. Database Configuration ---
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+connectionString = AstroVerse.Api.ConnectionStringParser.ConvertPostgresUriToConnectionString(connectionString);
 if (string.IsNullOrEmpty(connectionString))
 {
     // Fallback to SQLite in workspace for immediate portability
