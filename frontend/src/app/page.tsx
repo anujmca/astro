@@ -521,7 +521,7 @@ export default function AstroVerseDashboard() {
   });
 
   // Base URL config
-  const API_BASE = "http://localhost:5000/api";
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
   // --- Static Fallback Translations Dictionary ---
   const localTranslations: Record<string, Record<string, string>> = {
@@ -2164,12 +2164,14 @@ export default function AstroVerseDashboard() {
             </div>
 
             {/* Demo Helpers Alert box */}
-            <div className="bg-amber-400/10 border border-amber-400/20 p-4 rounded-2xl text-xs text-amber-400 space-y-1">
-              <span className="font-bold uppercase tracking-wider block text-[10px]">Testing Credentials</span>
-              <p>• User Profile: <span className="font-mono text-white">user@astroverse.com</span> / <span className="font-mono text-white">User@123</span></p>
-              <p>• Admin Profile: <span className="font-mono text-white">admin@astroverse.com</span> / <span className="font-mono text-white">Admin@123</span></p>
-              <p className="text-[10px] text-muted-foreground/80 mt-1">OTP Simulation Code: <span className="font-mono text-white">1234</span></p>
-            </div>
+            {(API_BASE.includes("localhost") || API_BASE.includes("127.0.0.1")) && (
+              <div className="bg-amber-400/10 border border-amber-400/20 p-4 rounded-2xl text-xs text-amber-400 space-y-1">
+                <span className="font-bold uppercase tracking-wider block text-[10px]">Testing Credentials</span>
+                <p>• User Profile: <span className="font-mono text-white">user@astroverse.com</span> / <span className="font-mono text-white">User@123</span></p>
+                <p>• Admin Profile: <span className="font-mono text-white">admin@astroverse.com</span> / <span className="font-mono text-white">Admin@123</span></p>
+                <p className="text-[10px] text-muted-foreground/80 mt-1">OTP Simulation Code: <span className="font-mono text-white">1234</span></p>
+              </div>
+            )}
 
           </div>
         </div>
