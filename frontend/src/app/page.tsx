@@ -47,6 +47,277 @@ interface Appointment {
   astrologerName: string;
 }
 
+// --- Reusable Location Selector Component with Leaflet Map & Nominatim Autocomplete ---
+const LocationSelector = React.memo(({
+  place,
+  setPlace,
+  lat,
+  setLat,
+  lng,
+  setLng,
+  idPrefix,
+  leafletLoaded
+}: {
+  place: string;
+  setPlace: (v: string) => void;
+  lat: string;
+  setLat: (v: string) => void;
+  lng: string;
+  setLng: (v: string) => void;
+  idPrefix: string;
+  leafletLoaded: boolean;
+}) => {
+  const [searchQuery, setSearchQuery] = useState(place);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [manualEntry, setManualEntry] = useState(false);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const markerInstanceRef = useRef<any>(null);
+
+  // Sync input field value when external place changes
+  useEffect(() => {
+    setSearchQuery(place);
+  }, [place]);
+
+  // Handle search query autocomplete fetch
+  useEffect(() => {
+    if (!searchQuery || searchQuery.length < 3) {
+      setSuggestions([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setLoadingSuggestions(true);
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5&addressdetails=1`);
+        const data = await res.json();
+        setSuggestions(data);
+      } catch (e) {
+        console.error("Geocoding fetch failed", e);
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    }, 600); // 600ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Reverse geocode handler
+  const reverseGeocode = async (latitude: number, longitude: number) => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`);
+      const data = await res.json();
+      if (data.display_name) {
+        const address = data.address || {};
+        const shortName = address.city || address.town || address.village || address.suburb || data.display_name.split(",")[0];
+        const country = address.country || "";
+        const finalPlaceName = country ? `${shortName}, ${country}` : shortName;
+        setPlace(finalPlaceName);
+        setSearchQuery(finalPlaceName);
+      }
+    } catch (e) {
+      console.error("Reverse geocoding failed", e);
+    }
+  };
+
+  const reverseGeocodeRef = useRef(reverseGeocode);
+  reverseGeocodeRef.current = reverseGeocode;
+
+  // 1. Initialize Map once when Leaflet is loaded
+  useEffect(() => {
+    if (!leafletLoaded || !mapContainerRef.current) return;
+    const L = (window as any).L;
+    if (!L) return;
+
+    const latitude = parseFloat(lat) || 19.0760;
+    const longitude = parseFloat(lng) || 72.8777;
+    let map: any = null;
+    let marker: any = null;
+
+    if (!mapInstanceRef.current) {
+      try {
+        map = L.map(mapContainerRef.current, {
+          zoomControl: true,
+          attributionControl: false
+        }).setView([latitude, longitude], 9);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        marker = L.marker([latitude, longitude], {
+          draggable: true
+        }).addTo(map);
+
+        // Map Click Handler
+        map.on("click", async (e: any) => {
+          const { lat: clickLat, lng: clickLng } = e.latlng;
+          marker.setLatLng(e.latlng);
+          setLat(clickLat.toFixed(6));
+          setLng(clickLng.toFixed(6));
+          await reverseGeocodeRef.current(clickLat, clickLng);
+        });
+
+        // Marker Drag Handler
+        marker.on("dragend", async () => {
+          const pos = marker.getLatLng();
+          setLat(pos.lat.toFixed(6));
+          setLng(pos.lng.toFixed(6));
+          await reverseGeocodeRef.current(pos.lat, pos.lng);
+        });
+
+        mapInstanceRef.current = map;
+        markerInstanceRef.current = marker;
+      } catch (e) {
+        console.error("Leaflet map initialization failed", e);
+      }
+    }
+
+    // Cleanup function to destroy the map instance when the component unmounts
+    return () => {
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.remove();
+        } catch (e) {
+          console.error("Leaflet map removal failed", e);
+        }
+        mapInstanceRef.current = null;
+        markerInstanceRef.current = null;
+      }
+    };
+  }, [leafletLoaded]);
+
+  // 2. Sync coordinates dynamically without rebuilding the map
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const marker = markerInstanceRef.current;
+    if (!map || !marker) return;
+
+    const latitude = parseFloat(lat) || 19.0760;
+    const longitude = parseFloat(lng) || 72.8777;
+
+    try {
+      const currentLatLng = marker.getLatLng();
+      if (Math.abs(currentLatLng.lat - latitude) > 0.00001 || Math.abs(currentLatLng.lng - longitude) > 0.00001) {
+        marker.setLatLng([latitude, longitude]);
+        map.setView([latitude, longitude], map.getZoom());
+      }
+    } catch (e) {
+      console.error("Leaflet map update failed", e);
+    }
+  }, [lat, lng]);
+
+  // Select Autocomplete Suggestion
+  const handleSelectSuggestion = (item: any) => {
+    const address = item.address || {};
+    const shortName = address.city || address.town || address.village || address.suburb || item.display_name.split(",")[0];
+    const country = address.country || "";
+    const finalPlaceName = country ? `${shortName}, ${country}` : shortName;
+    
+    setPlace(finalPlaceName);
+    setSearchQuery(finalPlaceName);
+    setLat(parseFloat(item.lat).toFixed(6));
+    setLng(parseFloat(item.lon).toFixed(6));
+    setSuggestions([]);
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Place Autocomplete Search Input */}
+      <div className="relative space-y-1">
+        <label className="text-xs font-semibold text-muted-foreground">Search Birth Location</label>
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Start typing city/country..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 pl-9 text-sm outline-none text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50"
+          />
+          <MapPin className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+          {loadingSuggestions && (
+            <div className="absolute right-3 top-3.5 h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
+          )}
+        </div>
+
+        {/* Autocomplete Suggestions Dropdown */}
+        {suggestions.length > 0 && (
+          <div className="absolute z-50 w-full bg-[#1b1b32] dark:bg-[#1b1b32] bg-white border border-white/10 dark:border-white/10 border-black/10 rounded-lg shadow-xl max-h-60 overflow-y-auto mt-1 divide-y divide-white/5">
+            {suggestions.map((item, index) => (
+              <div
+                key={`${idPrefix}-sugg-${index}`}
+                onClick={() => handleSelectSuggestion(item)}
+                className="p-3 text-xs text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground cursor-pointer transition text-left"
+              >
+                {item.display_name}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Map View Section */}
+      {leafletLoaded ? (
+        <div className="space-y-1">
+          <label className="text-[10px] font-semibold text-muted-foreground flex justify-between">
+            <span>Select Pin on Interactive Map</span>
+            <span className="text-primary italic">Drag marker or click map to adjust</span>
+          </label>
+          <div
+            ref={mapContainerRef}
+            className="w-full h-[180px] rounded-lg border border-white/10 bg-black/20"
+            style={{ zIndex: 1 }}
+          />
+        </div>
+      ) : (
+        <div className="w-full h-[180px] rounded-lg border border-white/10 bg-white/5 animate-pulse flex items-center justify-center text-xs text-muted-foreground">
+          Loading Map Engine...
+        </div>
+      )}
+
+      {/* Toggle Manual Coordinates Entry */}
+      <div className="flex items-center justify-between pt-1">
+        <button
+          type="button"
+          onClick={() => setManualEntry(!manualEntry)}
+          className="text-[10px] text-primary hover:underline font-semibold"
+        >
+          {manualEntry ? "Hide Precise Coordinates" : "Show Precise Coordinates (Latitude / Longitude)"}
+        </button>
+      </div>
+
+      {/* Manual Latitude & Longitude Inputs */}
+      {manualEntry && (
+        <div className="grid grid-cols-2 gap-3 animate-fadeIn">
+          <div className="space-y-1 text-left">
+            <label className="text-[10px] font-semibold text-muted-foreground">Latitude (°N)</label>
+            <input
+              type="number"
+              step="0.000001"
+              required
+              value={lat}
+              onChange={(e) => setLat(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-xs outline-none text-foreground focus:border-primary/50"
+            />
+          </div>
+          <div className="space-y-1 text-left">
+            <label className="text-[10px] font-semibold text-muted-foreground">Longitude (°E)</label>
+            <input
+              type="number"
+              step="0.000001"
+              required
+              value={lng}
+              onChange={(e) => setLng(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-xs outline-none text-foreground focus:border-primary/50"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+LocationSelector.displayName = "LocationSelector";
+
 export default function AstroVerseDashboard() {
   // --- States ---
   const [activeTab, setActiveTab] = useState<string>("home");
@@ -184,258 +455,6 @@ export default function AstroVerseDashboard() {
       document.documentElement.classList.remove("light-theme");
     }
   }, [theme]);
-
-  // --- Reusable Location Selector Component with Leaflet Map & Nominatim Autocomplete ---
-  const LocationSelector = ({
-    place,
-    setPlace,
-    lat,
-    setLat,
-    lng,
-    setLng,
-    idPrefix
-  }: {
-    place: string;
-    setPlace: (v: string) => void;
-    lat: string;
-    setLat: (v: string) => void;
-    lng: string;
-    setLng: (v: string) => void;
-    idPrefix: string;
-  }) => {
-    const [searchQuery, setSearchQuery] = useState(place);
-    const [suggestions, setSuggestions] = useState<any[]>([]);
-    const [loadingSuggestions, setLoadingSuggestions] = useState(false);
-    const [manualEntry, setManualEntry] = useState(false);
-    const mapContainerRef = useRef<HTMLDivElement>(null);
-    const mapInstanceRef = useRef<any>(null);
-    const markerInstanceRef = useRef<any>(null);
-
-    // Sync input field value when external place changes
-    useEffect(() => {
-      setSearchQuery(place);
-    }, [place]);
-
-    // Handle search query autocomplete fetch
-    useEffect(() => {
-      if (!searchQuery || searchQuery.length < 3) {
-        setSuggestions([]);
-        return;
-      }
-
-      const timer = setTimeout(async () => {
-        setLoadingSuggestions(true);
-        try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5&addressdetails=1`);
-          const data = await res.json();
-          setSuggestions(data);
-        } catch (e) {
-          console.error("Geocoding fetch failed", e);
-        } finally {
-          setLoadingSuggestions(false);
-        }
-      }, 600); // 600ms debounce
-
-      return () => clearTimeout(timer);
-    }, [searchQuery]);
-
-    // Initialize/Update Map
-    useEffect(() => {
-      if (!leafletLoaded || !mapContainerRef.current) return;
-      const L = (window as any).L;
-      if (!L) return;
-
-      const latitude = parseFloat(lat) || 19.0760;
-      const longitude = parseFloat(lng) || 72.8777;
-
-      if (!mapInstanceRef.current) {
-        // Create Leaflet Map instance
-        const map = L.map(mapContainerRef.current, {
-          zoomControl: true,
-          attributionControl: false
-        }).setView([latitude, longitude], 9);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-        const marker = L.marker([latitude, longitude], {
-          draggable: true
-        }).addTo(map);
-
-        // Map Click Handler
-        map.on("click", async (e: any) => {
-          const { lat: clickLat, lng: clickLng } = e.latlng;
-          marker.setLatLng(e.latlng);
-          setLat(clickLat.toFixed(6));
-          setLng(clickLng.toFixed(6));
-          await reverseGeocode(clickLat, clickLng);
-        });
-
-        // Marker Drag Handler
-        marker.on("dragend", async () => {
-          const pos = marker.getLatLng();
-          setLat(pos.lat.toFixed(6));
-          setLng(pos.lng.toFixed(6));
-          await reverseGeocode(pos.lat, pos.lng);
-        });
-
-        mapInstanceRef.current = map;
-        markerInstanceRef.current = marker;
-      } else {
-        // Update Marker and View on Coordinate Change
-        const map = mapInstanceRef.current;
-        const marker = markerInstanceRef.current;
-        try {
-          const currentLatLng = marker.getLatLng();
-          if (currentLatLng.lat !== latitude || currentLatLng.lng !== longitude) {
-            marker.setLatLng([latitude, longitude]);
-            map.setView([latitude, longitude], map.getZoom());
-          }
-        } catch (e) {
-          console.error("Leaflet map update failed", e);
-        }
-      }
-
-      // Cleanup function to destroy the map instance when the component unmounts
-      return () => {
-        if (mapInstanceRef.current) {
-          try {
-            mapInstanceRef.current.remove();
-          } catch (e) {
-            console.error("Leaflet map removal failed", e);
-          }
-          mapInstanceRef.current = null;
-          markerInstanceRef.current = null;
-        }
-      };
-    }, [leafletLoaded, lat, lng]);
-
-    // Reverse geocode handler
-    const reverseGeocode = async (latitude: number, longitude: number) => {
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`);
-        const data = await res.json();
-        if (data.display_name) {
-          const address = data.address || {};
-          const shortName = address.city || address.town || address.village || address.suburb || data.display_name.split(",")[0];
-          const country = address.country || "";
-          const finalPlaceName = country ? `${shortName}, ${country}` : shortName;
-          setPlace(finalPlaceName);
-          setSearchQuery(finalPlaceName);
-        }
-      } catch (e) {
-        console.error("Reverse geocoding failed", e);
-      }
-    };
-
-    // Select Autocomplete Suggestion
-    const handleSelectSuggestion = (item: any) => {
-      const address = item.address || {};
-      const shortName = address.city || address.town || address.village || address.suburb || item.display_name.split(",")[0];
-      const country = address.country || "";
-      const finalPlaceName = country ? `${shortName}, ${country}` : shortName;
-      
-      setPlace(finalPlaceName);
-      setSearchQuery(finalPlaceName);
-      setLat(parseFloat(item.lat).toFixed(6));
-      setLng(parseFloat(item.lon).toFixed(6));
-      setSuggestions([]);
-    };
-
-    return (
-      <div className="space-y-3">
-        {/* Place Autocomplete Search Input */}
-        <div className="relative space-y-1">
-          <label className="text-xs font-semibold text-muted-foreground">Search Birth Location</label>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Start typing city/country..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 pl-9 text-sm outline-none text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50"
-            />
-            <MapPin className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-            {loadingSuggestions && (
-              <div className="absolute right-3 top-3.5 h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
-            )}
-          </div>
-
-          {/* Autocomplete Suggestions Dropdown */}
-          {suggestions.length > 0 && (
-            <div className="absolute z-50 w-full bg-[#1b1b32] dark:bg-[#1b1b32] bg-white border border-white/10 dark:border-white/10 border-black/10 rounded-lg shadow-xl max-h-60 overflow-y-auto mt-1 divide-y divide-white/5">
-              {suggestions.map((item, index) => (
-                <div
-                  key={`${idPrefix}-sugg-${index}`}
-                  onClick={() => handleSelectSuggestion(item)}
-                  className="p-3 text-xs text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground cursor-pointer transition text-left"
-                >
-                  {item.display_name}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Map View Section */}
-        {leafletLoaded ? (
-          <div className="space-y-1">
-            <label className="text-[10px] font-semibold text-muted-foreground flex justify-between">
-              <span>Select Pin on Interactive Map</span>
-              <span className="text-primary italic">Drag marker or click map to adjust</span>
-            </label>
-            <div
-              ref={mapContainerRef}
-              className="w-full h-[180px] rounded-lg border border-white/10 bg-black/20"
-              style={{ zIndex: 1 }}
-            />
-          </div>
-        ) : (
-          <div className="w-full h-[180px] rounded-lg border border-white/10 bg-white/5 animate-pulse flex items-center justify-center text-xs text-muted-foreground">
-            Loading Map Engine...
-          </div>
-        )}
-
-        {/* Toggle Manual Coordinates Entry */}
-        <div className="flex items-center justify-between pt-1">
-          <button
-            type="button"
-            onClick={() => setManualEntry(!manualEntry)}
-            className="text-[10px] text-primary hover:underline font-semibold"
-          >
-            {manualEntry ? "Hide Precise Coordinates" : "Show Precise Coordinates (Latitude / Longitude)"}
-          </button>
-        </div>
-
-        {/* Manual Latitude & Longitude Inputs */}
-        {manualEntry && (
-          <div className="grid grid-cols-2 gap-3 animate-fadeIn">
-            <div className="space-y-1 text-left">
-              <label className="text-[10px] font-semibold text-muted-foreground">Latitude (°N)</label>
-              <input
-                type="number"
-                step="0.000001"
-                required
-                value={lat}
-                onChange={(e) => setLat(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-xs outline-none text-foreground focus:border-primary/50"
-              />
-            </div>
-            <div className="space-y-1 text-left">
-              <label className="text-[10px] font-semibold text-muted-foreground">Longitude (°E)</label>
-              <input
-                type="number"
-                step="0.000001"
-                required
-                value={lng}
-                onChange={(e) => setLng(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-xs outline-none text-foreground focus:border-primary/50"
-              />
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
 
   // Astrology Chart States
   const [selectedChartStyle, setSelectedChartStyle] = useState<"north" | "south" | "east">("north");
@@ -2469,6 +2488,7 @@ export default function AstroVerseDashboard() {
                       lng={newLng}
                       setLng={setNewLng}
                       idPrefix="add-profile"
+                      leafletLoaded={leafletLoaded}
                     />
                   </div>
 
@@ -2609,6 +2629,7 @@ export default function AstroVerseDashboard() {
                             lng={editLng}
                             setLng={setEditLng}
                             idPrefix="edit-profile"
+                            leafletLoaded={leafletLoaded}
                           />
                         </div>
 
@@ -2992,6 +3013,7 @@ export default function AstroVerseDashboard() {
                     lng={newLng}
                     setLng={setNewLng}
                     idPrefix="generator"
+                    leafletLoaded={leafletLoaded}
                   />
 
                   <button 
