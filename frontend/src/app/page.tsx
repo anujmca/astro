@@ -1897,7 +1897,7 @@ export default function AstroVerseDashboard() {
     };
 
     return (
-      <svg viewBox="0 0 200 200" className="w-full aspect-square max-w-[280px] border border-black/10 dark:border-white/20 rounded-lg bg-black/5 dark:bg-black/40">
+      <svg viewBox="0 0 200 200" className="w-full aspect-square max-w-[340px] border border-black/10 dark:border-white/20 rounded-lg bg-black/5 dark:bg-black/40">
         {/* Draw Outer Square */}
         <rect x="10" y="10" width="180" height="180" className="chart-line" />
         {/* Draw Inner Diagonals */}
@@ -1907,7 +1907,7 @@ export default function AstroVerseDashboard() {
         <line x1="100" y1="10" x2="10" y2="100" className="chart-line" />
         <line x1="10" y1="100" x2="100" y2="190" className="chart-line" />
         <line x1="100" y1="190" x2="190" y2="100" className="chart-line" />
-        <line x1="190" y1="100" x2="100" y2="1" className="chart-line" />
+        <line x1="190" y1="100" x2="100" y2="10" className="chart-line" />
 
         {/* House Numbers & Planets Labels */}
         <text x="100" y="45" className="chart-planet">{getPlanetsString("house1")}</text>
@@ -1964,7 +1964,7 @@ export default function AstroVerseDashboard() {
     ];
 
     return (
-      <svg viewBox="0 0 200 200" className="w-full aspect-square max-w-[280px] border border-black/10 dark:border-white/20 rounded-lg bg-black/5 dark:bg-black/40">
+      <svg viewBox="0 0 200 200" className="w-full aspect-square max-w-[340px] border border-black/10 dark:border-white/20 rounded-lg bg-black/5 dark:bg-black/40">
         {/* Draw outer border */}
         <rect x="0" y="0" width="200" height="200" className="chart-line" />
         
