@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { 
   Users, Sparkles, MapPin, Calendar, Heart, MessageSquare, 
   ShoppingBag, Settings, Award, ArrowRight, UserPlus, Globe, 
-  Trash2, Plus, ArrowUpRight, Check, Play, Sun, Moon, Volume2, Mic
+  Trash2, Plus, ArrowUpRight, Check, Play, Sun, Moon, Volume2, Mic,
+  Edit
 } from "lucide-react";
 
 // --- Astro Types ---
@@ -72,6 +73,25 @@ export default function AstroVerseDashboard() {
   const [newTags, setNewTags] = useState("Family");
   const [newNotes, setNewNotes] = useState("");
 
+  // Edit Form States
+  const [isEditingMember, setIsEditingMember] = useState<boolean>(false);
+  const [editName, setEditName] = useState("");
+  const [editGender, setEditGender] = useState("Male");
+  const [editRelation, setEditRelation] = useState("Sibling");
+  const [editDob, setEditDob] = useState("");
+  const [editTob, setEditTob] = useState("");
+  const [editPlace, setEditPlace] = useState("");
+  const [editLat, setEditLat] = useState("");
+  const [editLng, setEditLng] = useState("");
+  const [editTags, setEditTags] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+
+  // Detailed Map View States
+  const [showDetailMap, setShowDetailMap] = useState<boolean>(false);
+  const detailMapContainerRef = useRef<HTMLDivElement>(null);
+  const detailMapInstanceRef = useRef<any>(null);
+  const detailMarkerInstanceRef = useRef<any>(null);
+
   const [leafletLoaded, setLeafletLoaded] = useState(false);
 
   useEffect(() => {
@@ -104,6 +124,56 @@ export default function AstroVerseDashboard() {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (!leafletLoaded || !showDetailMap || !detailMapContainerRef.current || !selectedVaultMember) return;
+    const L = (window as any).L;
+    if (!L) return;
+
+    const lat = selectedVaultMember.latitude;
+    const lng = selectedVaultMember.longitude;
+
+    if (!detailMapInstanceRef.current) {
+      try {
+        const map = L.map(detailMapContainerRef.current, {
+          zoomControl: true,
+          attributionControl: false
+        }).setView([lat, lng], 10);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        const marker = L.marker([lat, lng]).addTo(map);
+        marker.bindPopup(`<b>${selectedVaultMember.name}</b><br/>${selectedVaultMember.placeOfBirth}`).openPopup();
+
+        detailMapInstanceRef.current = map;
+        detailMarkerInstanceRef.current = marker;
+      } catch (e) {
+        console.error("Failed to initialize detail map", e);
+      }
+    } else {
+      const map = detailMapInstanceRef.current;
+      const marker = detailMarkerInstanceRef.current;
+      try {
+        marker.setLatLng([lat, lng]);
+        marker.getPopup().setContent(`<b>${selectedVaultMember.name}</b><br/>${selectedVaultMember.placeOfBirth}`);
+        map.setView([lat, lng], 10);
+      } catch (e) {
+        console.error("Failed to update detail map", e);
+      }
+    }
+
+    return () => {
+      if (detailMapInstanceRef.current) {
+        try {
+          detailMapInstanceRef.current.remove();
+        } catch (e) {
+          console.error("Detail Leaflet map removal failed", e);
+        }
+        detailMapInstanceRef.current = null;
+        detailMarkerInstanceRef.current = null;
+      }
+    };
+  }, [leafletLoaded, showDetailMap, selectedVaultMember?.id, selectedVaultMember?.latitude, selectedVaultMember?.longitude]);
 
   // --- Reusable Location Selector Component with Leaflet Map & Nominatim Autocomplete ---
   const LocationSelector = ({
@@ -749,6 +819,63 @@ export default function AstroVerseDashboard() {
     }
   };
 
+  const startEditMember = (member: FamilyMember) => {
+    setIsEditingMember(true);
+    setEditName(member.name);
+    setEditGender(member.gender);
+    setEditRelation(member.relationType);
+    setEditDob(member.dateOfBirth.split('T')[0]);
+    setEditTob(member.timeOfBirth.substring(0, 5));
+    setEditPlace(member.placeOfBirth);
+    setEditLat(member.latitude.toString());
+    setEditLng(member.longitude.toString());
+    setEditTags(member.tags.join(", "));
+    setEditNotes(member.notes || "");
+  };
+
+  const handleUpdateMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedVaultMember) return;
+
+    const payload = {
+      name: editName,
+      gender: editGender,
+      relationType: editRelation,
+      dateOfBirth: editDob,
+      timeOfBirth: editTob.length === 5 ? `${editTob}:00` : editTob,
+      latitude: parseFloat(editLat),
+      longitude: parseFloat(editLng),
+      placeOfBirth: editPlace,
+      tags: editTags.split(",").map(t => t.trim()).filter(Boolean),
+      notes: editNotes
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/vault/${selectedVaultMember.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsEditingMember(false);
+        await loadVaultMembers();
+        const updated = { ...selectedVaultMember, ...payload };
+        setSelectedVaultMember(updated);
+        await handleSelectVaultMember(updated);
+      }
+    } catch {
+      // Local fallback
+      const updated = { ...selectedVaultMember, ...payload };
+      setFamilyMembers(prev => prev.map(m => m.id === selectedVaultMember.id ? updated : m));
+      setSelectedVaultMember(updated);
+      setIsEditingMember(false);
+      const timeOfBirth = TimeSpanParse(updated.timeOfBirth);
+      const generated = mockGenerateKundli(updated.name, updated.gender, new Date(updated.dateOfBirth), timeOfBirth, updated.latitude, updated.longitude, updated.placeOfBirth);
+      setVaultMemberKundli(generated);
+    }
+  };
+
   const deleteMember = async (id: string) => {
     try {
       const res = await fetch(`${API_BASE}/vault/${id}`, { method: "DELETE" });
@@ -1271,6 +1398,8 @@ export default function AstroVerseDashboard() {
 
   const handleSelectVaultMember = async (member: FamilyMember) => {
     setSelectedVaultMember(member);
+    setIsEditingMember(false);
+    setShowDetailMap(false);
     try {
       const res = await fetch(`${API_BASE}/vault/${member.id}/kundli`);
       const data = await res.json();
@@ -2359,33 +2488,169 @@ export default function AstroVerseDashboard() {
                 {/* Selected Profile Detailed Astrological Vault Chart */}
                 <div className="md:col-span-2">
                   {selectedVaultMember ? (
-                    <div className="glass-card p-6 rounded-2xl space-y-6 animate-fadeIn">
-                      
-                      <div className="flex flex-col space-y-3 border-b border-white/5 pb-6">
-                        <div className="flex justify-between items-center w-full">
-                          <div className="flex items-center gap-4">
-                            <img 
-                              src={selectedVaultMember.photoUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${selectedVaultMember.name}`}
-                              className="h-16 w-16 bg-white/10 rounded-full border border-white/20"
-                              alt="Avatar"
-                            />
-                            <div>
-                              <h3 className="text-2xl font-bold">{selectedVaultMember.name}</h3>
-                              <p className="text-sm text-primary font-medium">{selectedVaultMember.relationType}</p>
-                            </div>
-                          </div>
-                          <button 
-                            onClick={() => handlePrintPdf(vaultMemberKundli, selectedVaultMember.name, selectedVaultMember.gender, selectedVaultMember.dateOfBirth.split('T')[0], selectedVaultMember.timeOfBirth, selectedVaultMember.placeOfBirth)} 
-                            className="bg-amber-400 hover:bg-amber-500 text-black font-extrabold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 shadow transition-transform active:scale-95"
+                    isEditingMember ? (
+                      <form onSubmit={handleUpdateMember} className="glass-card p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 border-primary/20 animate-fadeIn text-left">
+                        <div className="md:col-span-3 flex justify-between items-center border-b border-white/5 pb-3">
+                          <h3 className="text-xl font-bold text-foreground">Edit Cosmic Profile</h3>
+                          <span className="text-xs text-primary font-medium">{editRelation} Relation</span>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-muted-foreground">Full Name</label>
+                          <input 
+                            type="text" required value={editName} onChange={(e) => setEditName(e.target.value)}
+                            placeholder="e.g. Jane Doe" className="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-sm outline-none focus:border-primary text-foreground"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-muted-foreground">Gender</label>
+                          <select 
+                            value={editGender} onChange={(e) => setEditGender(e.target.value)}
+                            className="w-full bg-[#1b1b32] border border-white/10 rounded-lg p-2.5 text-sm outline-none text-foreground"
                           >
-                            <Award className="h-3.5 w-3.5" /> Download Janam Patrika (PDF)
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Unisex">Unisex</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-muted-foreground">Relationship</label>
+                          <select 
+                            value={editRelation} onChange={(e) => setEditRelation(e.target.value)}
+                            className="w-full bg-[#1b1b32] border border-white/10 rounded-lg p-2.5 text-sm outline-none text-foreground"
+                          >
+                            <option value="Self">Self</option>
+                            <option value="Spouse">Spouse</option>
+                            <option value="Child">Child</option>
+                            <option value="Parent">Parent</option>
+                            <option value="Sibling">Sibling</option>
+                            <option value="Friend">Friend</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-muted-foreground">Date of Birth</label>
+                          <input 
+                            type="date" required value={editDob} onChange={(e) => setEditDob(e.target.value)}
+                            className="w-full bg-[#1b1b32] border border-white/10 rounded-lg p-2.5 text-sm outline-none text-foreground"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-muted-foreground">Time of Birth</label>
+                          <input 
+                            type="time" required value={editTob} onChange={(e) => setEditTob(e.target.value)}
+                            className="w-full bg-[#1b1b32] border border-white/10 rounded-lg p-2.5 text-sm outline-none text-foreground"
+                          />
+                        </div>
+
+                        <div className="md:col-span-3">
+                          <LocationSelector
+                            place={editPlace}
+                            setPlace={setEditPlace}
+                            lat={editLat}
+                            setLat={setEditLat}
+                            lng={editLng}
+                            setLng={setEditLng}
+                            idPrefix="edit-profile"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-muted-foreground">Tags (comma separated)</label>
+                          <input 
+                            type="text" value={editTags} onChange={(e) => setEditTags(e.target.value)}
+                            placeholder="e.g. Immediate, Partner" className="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-sm outline-none text-foreground"
+                          />
+                        </div>
+
+                        <div className="md:col-span-3 space-y-1 text-left">
+                          <label className="text-xs font-semibold text-muted-foreground">Custom Notes</label>
+                          <textarea 
+                            value={editNotes} onChange={(e) => setEditNotes(e.target.value)}
+                            placeholder="Astrological points, gemstone instructions, remedies"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg p-2.5 text-sm outline-none text-foreground"
+                          />
+                        </div>
+
+                        <div className="md:col-span-3 flex justify-end gap-3 border-t border-white/5 pt-4">
+                          <button 
+                            type="button" onClick={() => setIsEditingMember(false)}
+                            className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-foreground"
+                          >
+                            Cancel
+                          </button>
+                          <button 
+                            type="submit"
+                            className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-bold text-xs"
+                          >
+                            Save Changes
                           </button>
                         </div>
-                        <div className="text-xs text-muted-foreground bg-white/5 p-3 rounded-xl border border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <p><span className="font-semibold text-foreground">Birth Details:</span> {selectedVaultMember.dateOfBirth.split('T')[0]} @ {selectedVaultMember.timeOfBirth.substring(0, 5)}</p>
-                          <p><span className="font-semibold text-foreground">Location:</span> {selectedVaultMember.placeOfBirth} ({selectedVaultMember.latitude}°N, {selectedVaultMember.longitude}°E)</p>
+                      </form>
+                    ) : (
+                      <div className="glass-card p-6 rounded-2xl space-y-6 animate-fadeIn">
+                        
+                        <div className="flex flex-col space-y-3 border-b border-white/5 pb-6">
+                          <div className="flex justify-between items-center w-full flex-wrap gap-3">
+                            <div className="flex items-center gap-4">
+                              <img 
+                                src={selectedVaultMember.photoUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${selectedVaultMember.name}`}
+                                className="h-16 w-16 bg-white/10 rounded-full border border-white/20"
+                                alt="Avatar"
+                              />
+                              <div>
+                                <h3 className="text-2xl font-bold">{selectedVaultMember.name}</h3>
+                                <p className="text-sm text-primary font-medium">{selectedVaultMember.relationType}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 flex-wrap">
+                              <button 
+                                onClick={() => startEditMember(selectedVaultMember)}
+                                className="bg-[#cca043] hover:bg-[#b08730] text-black font-extrabold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 shadow transition-all active:scale-95"
+                              >
+                                <Edit className="h-3.5 w-3.5" /> Edit Profile
+                              </button>
+                              <button 
+                                onClick={() => handlePrintPdf(vaultMemberKundli, selectedVaultMember.name, selectedVaultMember.gender, selectedVaultMember.dateOfBirth.split('T')[0], selectedVaultMember.timeOfBirth, selectedVaultMember.placeOfBirth)} 
+                                className="bg-amber-400 hover:bg-amber-500 text-black font-extrabold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 shadow transition-all active:scale-95"
+                              >
+                                <Award className="h-3.5 w-3.5" /> Download Janam Patrika (PDF)
+                              </button>
+                            </div>
+                          </div>
+                          <div className="text-xs text-muted-foreground bg-white/5 p-3 rounded-xl border border-white/10">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left">
+                              <p><span className="font-semibold text-foreground">Birth Details:</span> {selectedVaultMember.dateOfBirth.split('T')[0]} @ {selectedVaultMember.timeOfBirth.substring(0, 5)}</p>
+                              <p className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-semibold text-foreground">Location:</span> 
+                                {selectedVaultMember.placeOfBirth} ({selectedVaultMember.latitude}°N, {selectedVaultMember.longitude}°E)
+                                <button 
+                                  onClick={() => setShowDetailMap(!showDetailMap)}
+                                  className="p-1 hover:bg-white/10 rounded transition-colors text-primary"
+                                  title="Expand Location in Map"
+                                >
+                                  <MapPin className="h-3.5 w-3.5" />
+                                </button>
+                              </p>
+                            </div>
+                            {showDetailMap && (
+                              <div className="mt-3 pt-3 border-t border-white/5 space-y-1 animate-fadeIn text-left">
+                                <label className="text-[10px] font-semibold text-muted-foreground flex justify-between">
+                                  <span>Interactive Location Map</span>
+                                  <span className="text-primary italic">{selectedVaultMember.placeOfBirth}</span>
+                                </label>
+                                <div
+                                  ref={detailMapContainerRef}
+                                  className="w-full h-[200px] rounded-lg border border-white/10 bg-black/20"
+                                  style={{ zIndex: 1 }}
+                                />
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
 
                       {/* Display Precomputed Kundli details */}
                       {vaultMemberKundli ? (
@@ -2601,7 +2866,8 @@ export default function AstroVerseDashboard() {
                       )}
 
                     </div>
-                  ) : (
+                  )
+                ) : (
                     <div className="glass-card h-80 rounded-2xl flex flex-col items-center justify-center text-center p-6 border-dashed">
                       <Users className="h-12 w-12 text-muted-foreground mb-4" />
                       <h3 className="font-bold text-lg">Select a Profile</h3>
