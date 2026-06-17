@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using AstroVerse.Core.Interfaces;
 using AstroVerse.Core.Domain;
 using AstroVerse.Infrastructure.Data;
@@ -112,6 +113,30 @@ namespace AstroVerse.Api.Controllers
                     date = DateTime.UtcNow.ToString("yyyy-MM-dd")
                 }
             });
+        }
+
+        [HttpGet("db-check")]
+        public async Task<IActionResult> DbCheck()
+        {
+            try
+            {
+                var usersCount = await _context.Users.CountAsync();
+                return Ok(new { 
+                    success = true, 
+                    message = "Database is connected and tables can be queried.",
+                    usersCount = usersCount
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { 
+                    success = false, 
+                    message = "Database diagnostic check failed.",
+                    error = ex.Message,
+                    innerException = ex.InnerException?.Message,
+                    stackTrace = ex.StackTrace
+                });
+            }
         }
     }
 
