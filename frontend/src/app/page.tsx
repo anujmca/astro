@@ -175,6 +175,16 @@ export default function AstroVerseDashboard() {
     };
   }, [leafletLoaded, showDetailMap, selectedVaultMember?.id, selectedVaultMember?.latitude, selectedVaultMember?.longitude]);
 
+  useEffect(() => {
+    if (theme === "light") {
+      document.body.classList.add("light-theme");
+      document.documentElement.classList.add("light-theme");
+    } else {
+      document.body.classList.remove("light-theme");
+      document.documentElement.classList.remove("light-theme");
+    }
+  }, [theme]);
+
   // --- Reusable Location Selector Component with Leaflet Map & Nominatim Autocomplete ---
   const LocationSelector = ({
     place,
@@ -2112,7 +2122,7 @@ export default function AstroVerseDashboard() {
   }
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${theme === "light" ? "light-theme" : ""}`} dir={rtl ? "rtl" : "ltr"}>
+    <div className={`min-h-screen transition-colors duration-300 bg-background text-foreground ${theme === "light" ? "light-theme" : ""}`} dir={rtl ? "rtl" : "ltr"}>
       
       {/* Background Glows */}
       <div className="cosmic-glow top-10 left-10" />
