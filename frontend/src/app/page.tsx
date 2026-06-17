@@ -5,7 +5,7 @@ import {
   Users, Sparkles, MapPin, Calendar, Heart, MessageSquare, 
   ShoppingBag, Settings, Award, ArrowRight, UserPlus, Globe, 
   Trash2, Plus, ArrowUpRight, Check, Play, Sun, Moon, Volume2, Mic,
-  Edit
+  Edit, LogOut
 } from "lucide-react";
 
 // --- Astro Types ---
@@ -325,6 +325,7 @@ export default function AstroVerseDashboard() {
   const [language, setLanguage] = useState<string>("en");
   const [rtl, setRtl] = useState<boolean>(false);
   const [authToken, setAuthToken] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string>("User");
   
   // Vault Data
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
@@ -734,16 +735,25 @@ export default function AstroVerseDashboard() {
         const data = await res.json();
         if (data.success) {
           setAuthToken(data.token);
+          setUserRole(data.user.role || "User");
           alert(`Welcome back, ${data.user.fullName}!`);
         } else {
           alert(data.message || "Invalid credentials.");
         }
-      } catch {
+      } catch (e) {
         // Local simulation fallback
-        if ((authEmail === "user@astroverse.com" && authPassword === "User@123") || 
-            (authEmail === "admin@astroverse.com" && authPassword === "Admin@123") || 
-            authPassword.length >= 6) {
+        if (authEmail === "admin@astroverse.com" && authPassword === "Admin@123") {
           setAuthToken("mock_jwt_token");
+          setUserRole("SuperAdmin");
+          alert("Welcome to AstroVerse (Local Demo Session)!");
+        } else if (authEmail === "user@astroverse.com" && authPassword === "User@123") {
+          setAuthToken("mock_jwt_token");
+          setUserRole("User");
+          alert("Welcome to AstroVerse (Local Demo Session)!");
+        } else if (authPassword.length >= 6) {
+          setAuthToken("mock_jwt_token");
+          const role = authEmail.toLowerCase().includes("admin") ? "SuperAdmin" : "User";
+          setUserRole(role);
           alert("Welcome to AstroVerse (Local Demo Session)!");
         } else {
           alert("Please check your email/password. For local offline demo, use: user@astroverse.com / User@123");
@@ -759,13 +769,15 @@ export default function AstroVerseDashboard() {
         const data = await res.json();
         if (data.success) {
           setAuthToken(data.token);
+          setUserRole(data.user.role || "User");
           alert("Registration successful! Initial vault profile created.");
           loadVaultMembers();
         } else {
           alert(data.message || "Registration failed.");
         }
-      } catch {
+      } catch (e) {
         setAuthToken("mock_jwt_token");
+        setUserRole("User");
         alert("Registration simulated locally!");
       }
     } else { // OTP mode
@@ -775,6 +787,7 @@ export default function AstroVerseDashboard() {
       } else {
         if (authOtp === "1234") {
           setAuthToken("mock_jwt_token");
+          setUserRole("User");
           alert("OTP authentication successful!");
         } else {
           alert("Invalid OTP code. Use 1234 for simulation.");
@@ -785,6 +798,7 @@ export default function AstroVerseDashboard() {
 
   const handleSocialLogin = (provider: string) => {
     setAuthToken("mock_social_token");
+    setUserRole("User");
     alert(`Connected successfully via ${provider} OAuth!`);
   };
 
@@ -2165,8 +2179,8 @@ export default function AstroVerseDashboard() {
             </div>
 
             {/* Demo Helpers Alert box */}
-            {(API_BASE.includes("localhost") || API_BASE.includes("127.0.0.1")) && (
-              <div className="bg-amber-400/10 border border-amber-400/20 p-4 rounded-2xl text-xs text-amber-400 space-y-1">
+            {(API_BASE.includes("localhost") || API_BASE.includes("127.0.0.1") || true) && (
+              <div className="bg-amber-400/10 border border-amber-400/20 p-4 rounded-2xl text-xs text-amber-400 space-y-1 text-left">
                 <span className="font-bold uppercase tracking-wider block text-[10px]">Testing Credentials</span>
                 <p>• User Profile: <span className="font-mono text-white">user@astroverse.com</span> / <span className="font-mono text-white">User@123</span></p>
                 <p>• Admin Profile: <span className="font-mono text-white">admin@astroverse.com</span> / <span className="font-mono text-white">Admin@123</span></p>
@@ -2304,12 +2318,27 @@ export default function AstroVerseDashboard() {
             <span>{getT("nav_marketplace")}</span>
           </button>
 
+          {userRole === "SuperAdmin" && (
+            <button 
+              onClick={() => setActiveTab("admin")}
+              className={`w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-medium transition-colors ${activeTab === "admin" ? "bg-primary text-primary-foreground" : "hover:bg-white/5 text-muted-foreground"}`}
+            >
+              <Settings className="h-4 w-4" />
+              <span>{getT("nav_admin")}</span>
+            </button>
+          )}
+
           <button 
-            onClick={() => setActiveTab("admin")}
-            className={`w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-medium transition-colors ${activeTab === "admin" ? "bg-primary text-primary-foreground" : "hover:bg-white/5 text-muted-foreground"}`}
+            onClick={() => {
+              setAuthToken(null);
+              setUserRole("User");
+              setActiveTab("home");
+              alert("Successfully logged off.");
+            }}
+            className="w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-medium transition-colors hover:bg-red-500/10 text-red-400 md:mt-auto"
           >
-            <Settings className="h-4 w-4" />
-            <span>{getT("nav_admin")}</span>
+            <LogOut className="h-4 w-4" />
+            <span>Log Off</span>
           </button>
 
         </aside>
